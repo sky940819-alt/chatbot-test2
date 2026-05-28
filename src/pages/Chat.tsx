@@ -100,7 +100,7 @@ function TypingIndicator() {
 }
 
 export function Chat() {
-  const { messages, isLoading, settings, addMessage, updateLastMessage, clearMessages, setLoading } =
+  const { messages, isLoading, settings, addMessage, updateLastMessage, clearMessages, setLoading, addTokens } =
     useAppStore()
   const [input, setInput] = useState('')
   const [error, setError] = useState('')
@@ -159,6 +159,7 @@ export function Chat() {
           updateLastMessage(full)
         }
         setStreaming(false)
+        addTokens(Math.ceil((text.length + full.length) / 4))
       } else {
         const reply = await sendMessage(
           history,
@@ -169,6 +170,7 @@ export function Chat() {
           settings.systemPrompt
         )
         addMessage({ role: 'assistant', content: reply })
+        addTokens(Math.ceil((text.length + reply.length) / 4))
       }
     } catch (err) {
       setStreaming(false)

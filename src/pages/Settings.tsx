@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   Key, Save, Eye, EyeOff, CheckCircle, AlertCircle, Settings as SettingsIcon,
-  Sliders, RefreshCw, Brain, ChevronDown
+  Sliders, RefreshCw, Brain, ChevronDown, Database, Download, Trash2, BarChart2
 } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { validateApiKey } from '@/services/openai.service'
@@ -94,7 +94,7 @@ function SelectField({
 }
 
 export function Settings() {
-  const { settings, updateSettings } = useAppStore()
+  const { settings, updateSettings, messages, clearMessages, totalTokensUsed, resetTokens } = useAppStore()
 
   const [tempApiKey, setTempApiKey] = useState(settings.apiKey)
   const [showKey, setShowKey] = useState(false)
@@ -112,6 +112,57 @@ export function Settings() {
     setToast({ type, msg })
     setTimeout(() => setToast(null), 3000)
   }
+
+  // 데이터 관리 헬퍼
+  const userMsgCount = messages.filter((m) => m.role === 'user').length
+  const aiMsgCount = messages.filter((m) => m.role === 'assistant').length
+  const storageBytes = new Blob([JSON.stringify(messages)]).size
+  const storageLabel =
+    storageBytes < 1024 ? `${storageBytes} B`
+    : storageBytes < 1024 * 1024 ? `${(storageBytes / 1024).toFixed(1)} KB`
+    : `${(storageBytes / 1024 / 1024).toFixed(2)} MB`
+
+  const handleExport = () => {
+    const data = {
+      exportedAt: new Date().toISOString(),
+      model: settings.model,
+      messages: messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+        timestamp: m.timestamp,
+      })),
+    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `chatbot-history-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    showToast('success', '대화 내역이 내보내기되었습니다.')
+  }
+
+  const handleClearAll = () => {
+    if (!confirm('모든 대화 내역을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return
+    clearMessages()
+    resetTokens()
+    showToast('success', '모든 데이터가 삭제되었습니다.')
+  }
+
+  // 사용량 통계 헬퍼
+  const TOKEN_LIMIT = 100_000
+  const usagePct = Math.min((totalTokensUsed / TOKEN_LIMIT) * 100, 100)
+
+  const MODEL_COST: Record<string, number> = {
+    'gpt-3.5-turbo': 0.002,
+    'gpt-3.5-turbo-16k': 0.004,
+    'gpt-4': 0.03,
+    'gpt-4-turbo': 0.01,
+    'gpt-4o': 0.005,
+    'gpt-4o-mini': 0.00015,
+  }
+  const costPer1k = MODEL_COST[settings.model] ?? 0.002
+  const estimatedCost = ((totalTokensUsed / 1000) * costPer1k).toFixed(4)
 
   const handleSaveApiKey = async () => {
     const key = tempApiKey.trim()
@@ -417,6 +468,119 @@ export function Settings() {
               AI의 성격과 응답 방식을 정의합니다
             </p>
           </div>
+        </div>
+      </Section>
+
+      {/* 데이터 관리 */}
+      <Section icon={Database} title="데이터 관리" desc="저장된 대화 내역을 관리하고 백업하세요">
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            <div
+              className="text-center py-4 rounded-xl border"
+              style={{ borderColor: 'var(--card-border)', backgroundColor: 'var(--muted)' }}
+            >
+              <p className="text-2xl font-bold text-blue-500">{userMsgCount + aiMsgCount}</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--muted-fg)' }}>전체 메시지</p>
+            </div>
+            <div
+              className="text-center py-4 rounded-xl border"
+              style={{ borderColor: 'var(--card-border)', backgroundColor: 'var(--muted)' }}
+            >
+              <p className="text-2xl font-bold text-green-500">{userMsgCount}</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--muted-fg)' }}>내 메시지</p>
+            </div>
+            <div
+              className="text-center py-4 rounded-xl border"
+              style={{ borderColor: 'var(--card-border)', backgroundColor: 'var(--muted)' }}
+            >
+              <p className="text-2xl font-bold text-purple-500">{storageLabel}</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--muted-fg)' }}>저장 용량</p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <button
+              onClick={handleExport}
+              disabled={messages.length === 0}
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-xl border transition-all hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-500 hover:border-blue-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ borderColor: 'var(--card-border)', color: 'var(--fg)' }}
+            >
+              <Download className="h-4 w-4" />
+              대화 내역 내보내기 (JSON)
+            </button>
+            <button
+              onClick={handleClearAll}
+              disabled={messages.length === 0}
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-xl border transition-all hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 hover:border-red-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ borderColor: 'var(--card-border)', color: 'var(--fg)' }}
+            >
+              <Trash2 className="h-4 w-4" />
+              모든 대화 내역 삭제
+            </button>
+          </div>
+        </div>
+      </Section>
+
+      {/* 사용량 통계 */}
+      <Section icon={BarChart2} title="사용량 통계" desc="토큰 사용량과 예상 비용을 확인하세요">
+        <div className="space-y-4">
+          <div>
+            <div className="flex justify-between text-sm mb-1.5">
+              <span style={{ color: 'var(--fg)' }}>누적 토큰 사용량</span>
+              <span className="font-semibold" style={{ color: 'var(--fg)' }}>
+                {totalTokensUsed.toLocaleString()} / {TOKEN_LIMIT.toLocaleString()}
+              </span>
+            </div>
+            <div
+              className="w-full h-2.5 rounded-full overflow-hidden"
+              style={{ backgroundColor: 'var(--muted)' }}
+            >
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  usagePct > 80 ? 'bg-red-500' : usagePct > 50 ? 'bg-amber-400' : 'bg-blue-500'
+                }`}
+                style={{ width: `${usagePct}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-xs mt-1" style={{ color: 'var(--muted-fg)' }}>
+              <span>{usagePct.toFixed(1)}% 사용</span>
+              <span>한도 100,000 tokens</span>
+            </div>
+          </div>
+
+          <div
+            className="rounded-xl p-4 space-y-3 border"
+            style={{ borderColor: 'var(--card-border)', backgroundColor: 'var(--muted)' }}
+          >
+            <div className="flex justify-between text-sm">
+              <span style={{ color: 'var(--muted-fg)' }}>사용 모델</span>
+              <span className="font-medium" style={{ color: 'var(--fg)' }}>{settings.model}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span style={{ color: 'var(--muted-fg)' }}>1K 토큰당 요금</span>
+              <span className="font-medium" style={{ color: 'var(--fg)' }}>${costPer1k.toFixed(4)}</span>
+            </div>
+            <div
+              className="border-t pt-3 flex justify-between text-sm"
+              style={{ borderColor: 'var(--card-border)' }}
+            >
+              <span className="font-medium" style={{ color: 'var(--fg)' }}>예상 비용</span>
+              <span className="font-bold text-blue-500">${estimatedCost}</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              if (!confirm('토큰 사용량 기록을 초기화하시겠습니까?')) return
+              resetTokens()
+              showToast('success', '사용량 통계가 초기화되었습니다.')
+            }}
+            className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-xl border transition-all hover:bg-slate-50 dark:hover:bg-slate-700"
+            style={{ borderColor: 'var(--card-border)', color: 'var(--muted-fg)' }}
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            사용량 통계 초기화
+          </button>
         </div>
       </Section>
 

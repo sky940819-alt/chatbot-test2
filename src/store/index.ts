@@ -6,6 +6,7 @@ export interface Message {
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
+  tokens?: number
 }
 
 export interface AppSettings {
@@ -23,11 +24,14 @@ interface AppStore {
   messages: Message[]
   isLoading: boolean
   settings: AppSettings
+  totalTokensUsed: number
   addMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => void
   updateLastMessage: (content: string) => void
   clearMessages: () => void
   setLoading: (v: boolean) => void
   updateSettings: (partial: Partial<AppSettings>) => void
+  addTokens: (count: number) => void
+  resetTokens: () => void
 }
 
 const defaultSettings: AppSettings = {
@@ -47,6 +51,7 @@ export const useAppStore = create<AppStore>()(
       messages: [],
       isLoading: false,
       settings: defaultSettings,
+      totalTokensUsed: 0,
 
       addMessage: (msg) =>
         set((state) => ({
@@ -75,10 +80,19 @@ export const useAppStore = create<AppStore>()(
 
       updateSettings: (partial) =>
         set((state) => ({ settings: { ...state.settings, ...partial } })),
+
+      addTokens: (count) =>
+        set((state) => ({ totalTokensUsed: state.totalTokensUsed + count })),
+
+      resetTokens: () => set({ totalTokensUsed: 0 }),
     }),
     {
       name: 'chatbot-storage',
-      partialize: (state) => ({ settings: state.settings }),
+      partialize: (state) => ({
+        settings: state.settings,
+        messages: state.messages,
+        totalTokensUsed: state.totalTokensUsed,
+      }),
     }
   )
 )
