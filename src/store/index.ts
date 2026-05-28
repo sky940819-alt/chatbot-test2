@@ -89,7 +89,7 @@ export const useAppStore = create<AppStore>()(
     {
       name: 'chatbot-storage',
       partialize: (state) => ({
-        settings: state.settings,
+        settings: { ...state.settings, apiKey: '' },
         messages: state.messages,
         totalTokensUsed: state.totalTokensUsed,
       }),

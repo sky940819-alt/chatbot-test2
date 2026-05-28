@@ -98,9 +98,7 @@ export function Settings() {
 
   const [tempApiKey, setTempApiKey] = useState(settings.apiKey)
   const [showKey, setShowKey] = useState(false)
-  const [validation, setValidation] = useState<ValidationState>(
-    settings.apiKey ? 'valid' : 'idle'
-  )
+  const [validation, setValidation] = useState<ValidationState>('idle')
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
   const [local, setLocal] = useState({ ...settings })
 
