@@ -141,6 +141,17 @@ export function Chat() {
       { role: 'user' as const, content: text },
     ]
 
+    // 현재 KST 날짜·시간을 시스템 프롬프트 앞에 자동 주입
+    const now = new Date()
+    const kstStr = now.toLocaleString('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric', month: 'long', day: 'numeric',
+      weekday: 'long', hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false,
+    })
+    const contextualPrompt =
+      `[현재 일시: ${kstStr} KST | 국가: 대한민국]\n\n${settings.systemPrompt}`
+
     try {
       if (settings.streamResponse) {
         setStreaming(true)
@@ -154,7 +165,7 @@ export function Chat() {
           settings.model,
           settings.temperature,
           settings.maxTokens,
-          settings.systemPrompt,
+          contextualPrompt,
           settings.provider
         )) {
           full += chunk
@@ -169,7 +180,7 @@ export function Chat() {
           settings.model,
           settings.temperature,
           settings.maxTokens,
-          settings.systemPrompt,
+          contextualPrompt,
           settings.provider
         )
         addMessage({ role: 'assistant', content: reply })
@@ -179,7 +190,6 @@ export function Chat() {
       setStreaming(false)
       const msg = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.'
       setError(msg)
-      // remove empty assistant placeholder on stream error
       if (settings.streamResponse) {
         useAppStore.setState((s) => ({
           messages: s.messages.filter((m) => m.content !== ''),
@@ -187,6 +197,7 @@ export function Chat() {
       }
     } finally {
       setLoading(false)
+      textareaRef.current?.focus()
     }
   }, [input, isLoading, settings, messages, addMessage, updateLastMessage, setLoading])
 
