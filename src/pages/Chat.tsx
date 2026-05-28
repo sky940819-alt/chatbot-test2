@@ -334,8 +334,8 @@ export function Chat() {
             onKeyDown={handleKeyDown}
             placeholder={noKey ? 'API 키를 먼저 설정해주세요...' : '메시지를 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈)'}
             rows={1}
-            disabled={isLoading}
-            className="flex-1 bg-transparent resize-none outline-none text-sm py-1 min-h-[28px] max-h-[160px] disabled:opacity-50"
+            readOnly={isLoading}
+            className="flex-1 bg-transparent resize-none outline-none text-sm py-1 min-h-[28px] max-h-[160px] read-only:opacity-50"
             style={{ color: 'var(--fg)' }}
           />
           {streaming ? (
