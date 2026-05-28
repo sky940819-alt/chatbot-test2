@@ -2,7 +2,8 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { Send, Trash2, Bot, User, AlertCircle, StopCircle, Copy, Check } from 'lucide-react'
 import { useAppStore } from '@/store'
-import { sendMessage, streamMessage } from '@/services/openai.service'
+import { sendMessage, streamMessage } from '@/services/chat.service'
+import { getProvider } from '@/services/providers'
 import type { Message } from '@/store'
 
 function MessageBubble({ msg }: { msg: Message }) {
@@ -153,7 +154,8 @@ export function Chat() {
           settings.model,
           settings.temperature,
           settings.maxTokens,
-          settings.systemPrompt
+          settings.systemPrompt,
+          settings.provider
         )) {
           full += chunk
           updateLastMessage(full)
@@ -167,7 +169,8 @@ export function Chat() {
           settings.model,
           settings.temperature,
           settings.maxTokens,
-          settings.systemPrompt
+          settings.systemPrompt,
+          settings.provider
         )
         addMessage({ role: 'assistant', content: reply })
         addTokens(Math.ceil((text.length + reply.length) / 4))
@@ -214,6 +217,9 @@ export function Chat() {
           <span className="font-semibold text-sm" style={{ color: 'var(--fg)' }}>
             AI 어시스턴트
           </span>
+          {getProvider(settings.provider).badge && (
+            <span className="text-sm">{getProvider(settings.provider).badge}</span>
+          )}
           <span
             className="text-xs px-2 py-0.5 rounded-full"
             style={{ backgroundColor: 'var(--muted)', color: 'var(--muted-fg)' }}

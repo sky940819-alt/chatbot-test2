@@ -11,6 +11,7 @@ export interface Message {
 
 export interface AppSettings {
   apiKey: string
+  provider: string
   model: string
   temperature: number
   maxTokens: number
@@ -36,7 +37,8 @@ interface AppStore {
 
 const defaultSettings: AppSettings = {
   apiKey: '',
-  model: 'gpt-3.5-turbo',
+  provider: 'openai',
+  model: 'gpt-4o-mini',
   temperature: 0.7,
   maxTokens: 2000,
   systemPrompt: '당신은 도움이 되는 AI 어시스턴트입니다. 친절하고 정확하게 답변해주세요.',
@@ -57,25 +59,18 @@ export const useAppStore = create<AppStore>()(
         set((state) => ({
           messages: [
             ...state.messages,
-            {
-              ...msg,
-              id: crypto.randomUUID(),
-              timestamp: new Date(),
-            },
+            { ...msg, id: crypto.randomUUID(), timestamp: new Date() },
           ],
         })),
 
       updateLastMessage: (content) =>
         set((state) => {
           const msgs = [...state.messages]
-          if (msgs.length > 0) {
-            msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], content }
-          }
+          if (msgs.length > 0) msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], content }
           return { messages: msgs }
         }),
 
       clearMessages: () => set({ messages: [] }),
-
       setLoading: (v) => set({ isLoading: v }),
 
       updateSettings: (partial) =>

@@ -1,10 +1,25 @@
 import type { Message } from '@/store'
 
-const BASE_URL = 'https://api.openai.com/v1'
+type ChatMsg = Pick<Message, 'role' | 'content'>
 
-export async function validateApiKey(apiKey: string): Promise<{ valid: boolean; error?: string }> {
+const OPENAI_BASE = 'https://api.openai.com/v1'
+const UPSTAGE_BASE = 'https://api.upstage.ai/v1'
+
+function baseUrl(provider: string) {
+  return provider === 'upstage' ? UPSTAGE_BASE : OPENAI_BASE
+}
+
+// o-series models don't support temperature and use max_completion_tokens
+function isReasoningModel(model: string) {
+  return /^o\d/.test(model)
+}
+
+export async function validateApiKey(
+  apiKey: string,
+  provider = 'openai'
+): Promise<{ valid: boolean; error?: string }> {
   try {
-    const res = await fetch(`${BASE_URL}/models`, {
+    const res = await fetch(`${baseUrl(provider)}/models`, {
       headers: { Authorization: `Bearer ${apiKey}` },
     })
     if (res.ok) return { valid: true }
@@ -16,68 +31,73 @@ export async function validateApiKey(apiKey: string): Promise<{ valid: boolean; 
 }
 
 export async function sendMessage(
-  messages: Pick<Message, 'role' | 'content'>[],
+  messages: ChatMsg[],
   apiKey: string,
   model: string,
   temperature: number,
   maxTokens: number,
-  systemPrompt: string
+  systemPrompt: string,
+  provider = 'openai'
 ): Promise<string> {
-  const payload = {
+  const reasoning = isReasoningModel(model)
+  const body: Record<string, unknown> = {
     model,
     messages: [
       { role: 'system', content: systemPrompt },
       ...messages.map((m) => ({ role: m.role, content: m.content })),
     ],
-    temperature,
-    max_tokens: maxTokens,
     stream: false,
+    ...(reasoning
+      ? { max_completion_tokens: maxTokens }
+      : { temperature, max_tokens: maxTokens }),
   }
 
-  const res = await fetch(`${BASE_URL}/chat/completions`, {
+  const res = await fetch(`${baseUrl(provider)}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   })
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     throw new Error(err?.error?.message || `API 오류: ${res.status}`)
   }
-
   const data = await res.json()
   return data.choices[0].message.content
 }
 
 export async function* streamMessage(
-  messages: Pick<Message, 'role' | 'content'>[],
+  messages: ChatMsg[],
   apiKey: string,
   model: string,
   temperature: number,
   maxTokens: number,
-  systemPrompt: string
+  systemPrompt: string,
+  provider = 'openai'
 ): AsyncGenerator<string> {
-  const payload = {
+  const reasoning = isReasoningModel(model)
+  const body: Record<string, unknown> = {
     model,
     messages: [
       { role: 'system', content: systemPrompt },
       ...messages.map((m) => ({ role: m.role, content: m.content })),
     ],
-    temperature,
-    max_tokens: maxTokens,
     stream: true,
+    ...(reasoning
+      ? { max_completion_tokens: maxTokens }
+      : { temperature, max_tokens: maxTokens }),
   }
 
-  const res = await fetch(`${BASE_URL}/chat/completions`, {
+  const res = await fetch(`${baseUrl(provider)}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   })
 
   if (!res.ok) {
@@ -106,9 +126,7 @@ export async function* streamMessage(
           const json = JSON.parse(data)
           const content = json.choices?.[0]?.delta?.content
           if (content) yield content
-        } catch {
-          // ignore malformed chunks
-        }
+        } catch { /* ignore */ }
       }
     }
   } finally {
