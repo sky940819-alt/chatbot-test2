@@ -1,0 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: #ffffff;
+    --fg: #0f172a;
+    --card: #ffffff;
+    --card-border: #e2e8f0;
+    --muted: #f8fafc;
+    --muted-fg: #64748b;
+    --primary: #3b82f6;
+    --primary-fg: #ffffff;
+    --input-bg: #f8fafc;
+    --input-border: #e2e8f0;
+    --nav-bg: #ffffff;
+    --nav-border: #e2e8f0;
+    --user-bubble: #3b82f6;
+    --user-bubble-fg: #ffffff;
+    --ai-bubble: #f1f5f9;
+    --ai-bubble-fg: #0f172a;
+  }
+
+  .dark {
+    --bg: #0f172a;
+    --fg: #f1f5f9;
+    --card: #1e293b;
+    --card-border: #334155;
+    --muted: #1e293b;
+    --muted-fg: #94a3b8;
+    --primary: #3b82f6;
+    --primary-fg: #ffffff;
+    --input-bg: #1e293b;
+    --input-border: #334155;
+    --nav-bg: #1e293b;
+    --nav-border: #334155;
+    --user-bubble: #3b82f6;
+    --user-bubble-fg: #ffffff;
+    --ai-bubble: #1e293b;
+    --ai-bubble-fg: #f1f5f9;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Noto Sans KR', 'Inter', sans-serif;
+  background-color: var(--bg);
+  color: var(--fg);
+  margin: 0;
+  padding: 0;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+/* Typing cursor animation */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.typing-cursor::after {
+  content: '|';
+  animation: blink 1s ease-in-out infinite;
+  margin-left: 1px;
+  color: var(--primary);
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Message bubble slide */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-slideUp {
+  animation: slideUp 0.25s ease-out;
+}
